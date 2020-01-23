@@ -2,6 +2,7 @@ from flask import *
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from datetime import datetime
+import re
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shortener.db'
@@ -36,15 +37,19 @@ def index():
 @app.route('/api/shorturl/new', methods=['POST'])
 def create():
     link = request.form['url']
-    new_link = Link(link = link)
+    pattern = r"^(?:http(s)?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$"
+    matched = re.match(pattern, link)
 
-    try:
-        db.session.add(new_link)
-        db.session.commit()
-        return link_schema.jsonify(new_link)
-        # return redirect('/')
-    except:
-        return 'There was an issue adding your task'
+    if matched:
+        new_link = Link(link = link)
+        try:
+            db.session.add(new_link)
+            db.session.commit()
+            return link_schema.jsonify(new_link)
+        except:
+            return json.jsonify(error = 'invalid URL')
+    else:
+        return json.jsonify(error = 'invalid URL')
 
 @app.route('/api/shorturl', methods=['GET'])
 def get_links():
@@ -54,8 +59,13 @@ def get_links():
 
 @app.route('/api/shorturl/<id>', methods=['GET'])
 def get_link(id):
-    link = Link.query.get(id)
-    return link_schema.jsonify(link)
+    try:
+        link_data = Link.query.get(id)
+        link = link_schema.jsonify(link_data)
+        the_link = link.json['link']
+        return redirect(the_link)
+    except:
+        return json.jsonify(error = 'invalid URL')
 
 if __name__ == '__main__':
     app.run(debug=True)
