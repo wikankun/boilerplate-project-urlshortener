@@ -45,7 +45,11 @@ def create():
         try:
             db.session.add(new_link)
             db.session.commit()
-            return link_schema.jsonify(new_link)
+            # return link_schema.jsonify(new_link)
+            data = link_schema.jsonify(new_link)
+            base_url = request.url_root
+            final_data = str(base_url)+'api/shorturl/'+str(data.json['id'])
+            return render_template('success.html', data=final_data)
         except:
             return json.jsonify(error = 'invalid URL')
     else:
